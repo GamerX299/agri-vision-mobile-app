@@ -1,0 +1,48 @@
+Build a Native Mobile Application using React Native & Expo for a plant disease diagnosis and satellite health monitoring system named 'Agri-Vision' (رؤية زراعية) with full Mobile UI layout.
+
+Key Features & Architectural Specifications:
+
+1. Dynamic Language Toggle (Arabic / English):
+   - Header controls allowing instantaneous switching between Arabic (RTL) and English (LTR).
+   - Dynamic localization across all screens, navigation tabs, satellite alerts, disease names, confidence scores, and treatment plans.
+
+2. Theme Toggle (Light Mode / Dark Mode):
+   - Sun/Moon icon toggle in top navigation header.
+   - Smooth transition between a clean Light theme (green/slate accent) and a sleek Dark theme (slate/emerald accent).
+
+3. Navigation Architecture:
+   - Native Bottom Tab Navigation with clear touch-optimized controls.
+
+Tab 1: 🛰️ Field Health (NDVI Monitoring / صحة الحقل)
+- Mobile Dashboard for offline satellite monitoring simulation.
+- Metric Card displaying overall NDVI Index (e.g., 0.32 - Water/Biotic Stress / إجهاد مائي/حيوي).
+- Simulated Field Sectors visual grid (Sectors A-1, A-2, A-3, A-4) with color-coded status (Green = Healthy, Yellow = Warning, Red = Danger Zone).
+- Warning Alert Banner: "⚠️ Danger hotspot detected in Sector A-4 (NDVI: 0.18) / تم اكتشاف بؤرة خطر في القطاع A-4".
+- Quick Action Button: "Capture Photo of Sector A-4 / التقط صورة للقطاع A-4 الآن" which programmatically switches to Tab 2.
+
+Tab 2: 📱 Field Diagnosis (التشخيص الميداني)
+- Native Camera Trigger and Gallery Picker controls.
+- Image pre-processing step: resize input images to (224, 224) pixels.
+- Load offline local classification logic mapping model inference (.tflite) classes to exact Arabic & English disease names and actionable treatment plans across all 14 trained classes:
+
+  1. Apple___Apple_scab -> Apple Scab (مرض جرب التفاح) | Rx: Apply suitable fungicide (Captan) & monitor humidity.
+  2. Apple___Black_rot -> Apple Black Rot (التعفن الأسود في التفاح) | Rx: Prune infected cankers and dispose outside farm.
+  3. Apple___Cedar_apple_rust -> Cedar Apple Rust (صدأ التفاح الجبلي) | Rx: Remove nearby juniper hosts and apply rust fungicide.
+  4. Apple___healthy -> Healthy Apple Plant (نبتة تفاح سليمة) | Rx: Crop healthy. Maintain standard irrigation & fertilization.
+  5. Tomato___Bacterial_spot -> Tomato Bacterial Spot (البقعة البكتيرية في الطماطم) | Rx: Apply copper-based bactericides; avoid overhead watering.
+  6. Tomato___Early_blight -> Tomato Early Blight (الندوة المبكرة في الطماطم) | Rx: Spray protective fungicide and prune lower leaves.
+  7. Tomato___healthy -> Healthy Tomato Plant (نبتة طماطم سليمة) | Rx: Crop healthy. Continue current management regimen.
+  8. Tomato___Late_blight -> Tomato Late Blight (الندوة المتأخرة في الطماطم) | Rx: Isolate infected plants and apply systemic fungicides immediately.
+  9. Tomato___Leaf_Mold -> Tomato Leaf Mold (عفن الأوراق في الطماطم) | Rx: Improve greenhouse airflow and reduce air humidity.
+  10. Tomato___Septoria_leaf_spot -> Tomato Septoria Leaf Spot (تبقع أوراق السبتوريا) | Rx: Clear fallen leaves and use anti-septoria fungicides.
+  11. Tomato___Spider_mites Two-spotted_spider_mite -> Two-Spotted Spider Mite (العنكبوت الأحمر ذو البقعتين) | Rx: Spray dedicated acaricide under leaf surfaces.
+  12. Tomato___Target_Spot -> Tomato Target Spot (مرض البقعة الهدفية في الطماطم) | Rx: Apply systemic fungicides and optimize plant spacing.
+  13. Tomato___Tomato_mosaic_virus -> Tomato Mosaic Virus (فيروس موزايك الطماطم) | Rx: Remove infected plants to halt spread; sanitize tools.
+  14. Tomato___Tomato_Yellow_Leaf_Curl_Virus -> Tomato Yellow Leaf Curl Virus (فيروس تجعد أوراق الطماطم الصفراء) | Rx: Control whitefly vectors using sticky traps & insecticides.
+
+- Interactive Result Card displaying:
+  * Plant & Disease Name (Localized in selected language).
+  * Confidence Score Badge (%).
+  * Actionable Treatment Plan / النصائح العلاجية الموصى بها.
+
+Ensure clean modular React Native/Expo code structure optimized for mobile execution and pitch demonstrations.

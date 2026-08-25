@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/agri-vision/"
+title = "Agri-Vision"
+description = "A bilingual mobile field health and plant disease diagnosis app for farmers, combining offline NDVI monitoring with camera-based crop diagnosis and actionable treatment guidance."
+version = "1.0.0"
+id = "artifacts/agri-vision"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/agri-vision/" ]
+localPort = 23833
+
+[services.development]
+run = "pnpm --filter @workspace/agri-vision run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/agri-vision", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/agri-vision", "run", "serve" ]
+
+[services.env]
+PORT = "23833"
+BASE_PATH = "/agri-vision/"

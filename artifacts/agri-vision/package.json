@@ -56,6 +56,10 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
-    "expo-image-manipulator": "14.0.8"
+    "expo-file-system": "19.0.24",
+    "expo-image-manipulator": "14.0.8",
+    "jpeg-js": "0.4.4",
+    "react-native-fast-tflite": "3.0.1",
+    "react-native-nitro-modules": "0.37.1"
   }
 }

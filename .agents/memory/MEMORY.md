@@ -1,1 +1,2 @@
 - [Expo theme tokens](expo-theme-tokens.md) — Keep palette typing separate from scheme-independent radius tokens.
+- [Native Expo bridges](expo-platform-bridge.md) — Keep native-only modules behind platform-specific files so Expo web never imports them.

@@ -1,0 +1,48 @@
+Update the 'Agri-Vision' (رؤية زراعية) React Native & Expo application to match new UI/UX requirements and integrate true local TFLite model inference.
+
+### 1. Tab 1 Refactoring: KSA Interactive Farm Exploration Dashboard (Mock/Simulated Data)
+Redesign Tab 1 ("Field Health" / "صحة الحقل") to closely mirror the reference exploration UI using realistic simulated/mock agricultural data:
+- **Top Metric Cards Grid (Simulated Data):**
+  * AI Predictions: 94%
+  * Verified Data: 1.8K (Blockchain-Verified Field Logs)
+  * Active Farms / Sites: 32 Active Sectors across KSA
+  * Sustainability Index: 89/100 (Water Efficiency & Eco Index)
+- **Latest Insights Section:**
+  * Display mock insight cards (e.g., "New Water-Stress Hotspot Detected in Al-Qassim Sector", "Blockchain Ledger Sync Complete", "Optimal Harvest Window Identified").
+- **Interactive Exploration Button & KSA Map Screen:**
+  * Add a primary action button: "Start Exploration" / "ابدأ الاستكشاف".
+  * Clicking this button opens a full-screen interactive Map component centered over Saudi Arabia (KSA) with labeled regions (Riyadh, Al-Qassim, Al-Jauf, Tabuk, Eastern Province, etc.).
+  * Place interactive mock farm markers on the KSA map (e.g., "Al-Qassim Olive & Date Farm", "Tabuk Wheat Sector B", "Al-Jauf Farm #04").
+  * Clicking a map marker opens a bottom sheet with mock telemetry: Farm ID, Crop Type, Soil Moisture/Temp, AI Stress %, and Blockchain Status. Include a quick-action button on stressed farms: "Diagnose Leaf Health" / "تشخيص صحة الأوراق", which programmatically switches navigation directly to Tab 2 (Field Diagnosis).
+  * Include a floating "Start Radar Scan" / "مسح الرادار" button with animated scanning effects that updates mock farm statuses.
+
+### 2. Tab 2 Refactoring: Full-Image Leaf Diagnosis & Real TFLite Model Inference
+- **Disable Image Crop Requirement:**
+  * Remove mandatory cropping steps from `expo-image-picker` or camera capture. Allow users to immediately pick or photograph full-size images and automatically resize them in-memory to `(224, 224, 3)` for model input without forcing manual crop UI.
+- **Fix Static Mock Results & Connect Real TFLite Engine:**
+  * Eliminate the hardcoded "Tomato Late Blight - 94%" mock response.
+  * Correctly load and run offline inference using the uploaded `model.tflite` model file (located in the repository/assets root).
+  * Convert input image tensors to normal float values `[0, 1]` or normalized RGB arrays required by MobileNet/TFLite models.
+  * Execute tensor evaluation across all 14 classes and dynamically extract the true predicted class index and confidence percentage (%):
+    1. Apple___Apple_scab
+    2. Apple___Black_rot
+    3. Apple___Cedar_apple_rust
+    4. Apple___healthy
+    5. Tomato___Bacterial_spot
+    6. Tomato___Early_blight
+    7. Tomato___healthy
+    8. Tomato___Late_blight
+    9. Tomato___Leaf_Mold
+    10. Tomato___Septoria_leaf_spot
+    11. Tomato___Spider_mites Two-spotted_spider_mite
+    12. Tomato___Target_Spot
+    13. Tomato___Tomato_mosaic_virus
+    14. Tomato___Tomato_Yellow_Leaf_Curl_Virus
+- **Out-of-Distribution / Non-Leaf Detection Handling:**
+  * If the maximum confidence score across all 14 classes is below 50% or if the image tensor indicates non-agricultural input (e.g., human faces, objects, chocolates, text), display a clear friendly alert: "Unrecognized / Non-Plant Image. Please capture a clear leaf photo." / "لم يتم التعرف على ورقة نباتية. يرجى التقاط صورة واضحة لورقة النبتة."
+  * Otherwise, render the exact localized disease name, confidence score, and prescribed treatment recommendation based on the highest probability class output.
+
+### 3. Seamless Cross-Tab Navigation & Styling Continuity
+- Enable smooth programmatic switching from Tab 1 to Tab 2 whenever a user clicks "Diagnose Leaf" on any farm popup or hotspot alert.
+- Maintain full Arabic (RTL) and English (LTR) language switching across all new screens, maps, telemetry cards, and insights.
+- Preserve Light/Dark theme compatibility across all components.

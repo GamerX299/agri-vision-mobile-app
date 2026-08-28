@@ -41,7 +41,7 @@ const farms: Farm[] = [
     moisture: '38%',
     temperature: '31°C',
     stress: 22,
-    marker: { left: '44%', top: '45%' },
+    marker: { left: '45%', top: '44%' },
   },
   {
     id: 'KSA-TB-008',
@@ -54,7 +54,7 @@ const farms: Farm[] = [
     moisture: '21%',
     temperature: '27°C',
     stress: 68,
-    marker: { left: '27%', top: '42%' },
+    marker: { left: '15%', top: '37%' },
   },
   {
     id: 'KSA-JF-004',
@@ -67,7 +67,7 @@ const farms: Farm[] = [
     moisture: '44%',
     temperature: '29°C',
     stress: 14,
-    marker: { left: '29%', top: '24%' },
+    marker: { left: '30%', top: '32%' },
   },
   {
     id: 'KSA-RY-021',
@@ -80,7 +80,7 @@ const farms: Farm[] = [
     moisture: '29%',
     temperature: '34°C',
     stress: 51,
-    marker: { left: '57%', top: '61%' },
+    marker: { left: '57%', top: '49%' },
   },
   {
     id: 'KSA-EP-019',
@@ -93,9 +93,14 @@ const farms: Farm[] = [
     moisture: '47%',
     temperature: '33°C',
     stress: 18,
-    marker: { left: '79%', top: '55%' },
+    marker: { left: '71%', top: '43%' },
   },
 ];
+
+// Natural Earth country boundary, simplified for mobile SVG rendering while
+// retaining the northern frontier, Red Sea coast, Gulf wedge, and southern border.
+const KSA_PATH =
+  'M 163.7 82.4 L 187.3 95.5 L 241.4 138.0 L 298.2 142.7 L 303.0 153.1 L 320.2 153.8 L 319.6 156.4 L 321.0 155.9 L 323.4 164.1 L 326.3 165.0 L 325.3 166.0 L 328.2 169.1 L 326.0 171.5 L 328.1 172.2 L 327.1 173.9 L 335.6 175.4 L 337.1 177.6 L 333.1 177.8 L 336.1 178.4 L 335.2 180.3 L 337.1 180.0 L 338.4 184.4 L 342.5 183.4 L 345.1 188.7 L 354.6 195.3 L 351.1 194.0 L 351.9 199.2 L 355.8 203.0 L 354.2 209.5 L 352.0 205.8 L 351.1 210.3 L 353.4 210.6 L 356.6 218.7 L 354.4 217.1 L 361.1 223.1 L 362.9 231.7 L 367.1 238.9 L 371.6 242.7 L 377.6 241.4 L 378.3 243.9 L 380.2 241.3 L 382.3 242.4 L 377.8 248.6 L 383.8 249.8 L 384.3 253.8 L 403.9 279.2 L 457.0 286.7 L 458.7 284.9 L 468.0 301.2 L 454.4 346.1 L 392.3 368.7 L 331.4 378.1 L 313.3 387.8 L 301.4 403.3 L 298.1 411.7 L 292.6 415.0 L 288.6 414.8 L 283.2 407.6 L 275.2 408.7 L 256.7 406.7 L 251.2 404.1 L 230.2 404.6 L 225.4 407.0 L 215.0 402.0 L 209.8 406.4 L 211.6 407.6 L 208.9 411.8 L 210.2 421.4 L 208.2 421.2 L 207.2 424.3 L 202.1 428.0 L 200.5 419.9 L 193.1 409.7 L 193.2 413.2 L 192.0 403.5 L 181.3 394.9 L 175.2 386.1 L 174.1 380.6 L 169.4 375.4 L 168.7 367.1 L 166.5 365.7 L 163.9 357.1 L 160.1 354.8 L 159.8 351.0 L 157.9 351.4 L 155.4 346.8 L 146.1 339.7 L 139.4 338.0 L 127.2 320.9 L 125.3 316.3 L 127.2 314.2 L 125.9 306.5 L 122.2 300.6 L 123.8 300.7 L 126.6 291.7 L 125.1 292.5 L 123.9 283.4 L 119.5 278.2 L 119.5 274.8 L 112.3 260.4 L 101.6 252.4 L 101.9 250.9 L 100.2 252.2 L 91.1 247.3 L 91.7 245.6 L 85.3 236.3 L 87.6 235.9 L 87.3 229.0 L 80.9 218.4 L 76.1 215.3 L 75.9 209.9 L 72.2 207.8 L 62.2 189.9 L 44.2 164.9 L 45.3 163.9 L 34.8 162.0 L 32.8 164.5 L 32.0 163.0 L 36.8 153.2 L 39.8 134.6 L 63.0 138.0 L 71.4 131.4 L 76.6 123.3 L 92.0 120.1 L 95.6 112.5 L 102.6 108.7 L 81.4 86.2 L 122.9 74.9 L 126.9 72.0 L 152.0 76.1 L 163.7 82.4 Z';
 
 function MetricCard({
   icon,
@@ -190,15 +195,22 @@ function KsaMap({
           <View style={[styles.gridLine, { backgroundColor: c.border }]} />
           <View style={[styles.gridLineHorizontal, { backgroundColor: c.border }]} />
         </View>
-        <Svg width="100%" height="100%" viewBox="0 0 340 440" style={StyleSheet.absoluteFill}>
+        <Svg
+          width="100%"
+          height="100%"
+          viewBox="0 0 500 500"
+          preserveAspectRatio="xMidYMid meet"
+          style={StyleSheet.absoluteFill}
+        >
           <Path
-            d="M51 62 L76 47 L108 40 L143 41 L179 47 L209 56 L231 70 L242 86 L252 98 L249 111 L261 125 L258 140 L270 154 L266 171 L278 187 L274 204 L287 220 L281 237 L294 252 L286 268 L300 284 L291 300 L275 307 L268 321 L252 329 L235 333 L220 346 L202 351 L184 363 L165 372 L147 365 L129 358 L112 347 L96 341 L82 330 L71 315 L61 303 L57 287 L47 275 L50 260 L40 246 L44 228 L37 213 L41 195 L35 179 L40 162 L35 146 L44 130 L41 114 L50 99 L46 84 L54 72 Z"
+            d={KSA_PATH}
             fill={`${c.primary}20`}
             stroke={c.primary}
-            strokeWidth="2"
+            strokeWidth="2.5"
+            strokeLinejoin="round"
           />
-          <SvgText x="121" y="188" fill={c.primary} fontSize="14" fontWeight="700">KSA</SvgText>
-          <SvgText x="105" y="207" fill={c.mutedForeground} fontSize="8">AGRICULTURAL SITES</SvgText>
+          <SvgText x="218" y="236" fill={c.primary} fontSize="14" fontWeight="700">KSA</SvgText>
+          <SvgText x="177" y="255" fill={c.mutedForeground} fontSize="8">AGRICULTURAL SITES</SvgText>
         </Svg>
 
         <Text style={[styles.regionLabel, styles.riyadhLabel, { color: c.mutedForeground }]}>{t('Riyadh', 'الرياض')}</Text>
@@ -418,10 +430,10 @@ const styles = StyleSheet.create({
   gridLine: { width: 1, height: '100%', position: 'absolute', left: '33%' },
   gridLineHorizontal: { height: 1, width: '100%', position: 'absolute', top: '53%' },
   regionLabel: { position: 'absolute', fontFamily: 'Inter_500Medium', fontSize: 9 },
-  riyadhLabel: { left: '51%', top: '51%' },
-  qassimLabel: { left: '37%', top: '41%' },
-  tabukLabel: { left: '23%', top: '27%' },
-  easternLabel: { left: '73%', top: '57%' },
+  riyadhLabel: { left: '52%', top: '47%' },
+  qassimLabel: { left: '39%', top: '40%' },
+  tabukLabel: { left: '10%', top: '34%' },
+  easternLabel: { left: '65%', top: '41%' },
   marker: { position: 'absolute', width: 34, height: 34, marginLeft: -17, marginTop: -17, alignItems: 'center', justifyContent: 'center' },
   markerHalo: { position: 'absolute', width: 31, height: 31, borderRadius: 16, borderWidth: 1.5, opacity: 0.5 },
   markerPin: { width: 25, height: 25, borderRadius: 13, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },

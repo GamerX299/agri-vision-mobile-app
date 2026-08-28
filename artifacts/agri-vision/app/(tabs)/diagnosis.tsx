@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -68,6 +68,7 @@ export default function Diagnosis() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<InferenceResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [settingsRequired, setSettingsRequired] = useState(false);
   const t = (en: string, ar: string) => (isArabic ? ar : en);
 
   const runInference = async (uri: string) => {
@@ -85,6 +86,10 @@ export default function Diagnosis() {
       const output = modelPlugin.model.outputs[0];
       if (!input || !output || input.shape.join('x') !== '1x224x224x3') {
         throw new Error('This model does not expose the expected 224×224 RGB input.');
+      }
+      const outputSize = output.shape.reduce((size, dimension) => size * dimension, 1);
+      if (outputSize !== diseases.length) {
+        throw new Error(`This model does not expose the expected ${diseases.length}-class output.`);
       }
       const inputBuffer = await makeModelInput(uri, input.dataType);
       const outputs = await modelPlugin.model.run([inputBuffer]);
@@ -106,9 +111,12 @@ export default function Diagnosis() {
 
   const pick = async (fromCamera: boolean) => {
     try {
+      setError(null);
+      setSettingsRequired(false);
       const permission = fromCamera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         setError(t('Permission is needed to access your camera or gallery.', 'يلزم السماح بالوصول إلى الكاميرا أو المعرض.'));
+        setSettingsRequired(Platform.OS !== 'web' && permission.canAskAgain === false);
         return;
       }
       const response = fromCamera
@@ -121,6 +129,7 @@ export default function Diagnosis() {
       await runInference(resized.uri);
     } catch (pickerError) {
       setError(pickerError instanceof Error ? pickerError.message : t('Unable to read this image.', 'تعذر قراءة هذه الصورة.'));
+      setSettingsRequired(false);
       setBusy(false);
     }
   };
@@ -143,7 +152,7 @@ export default function Diagnosis() {
         <View style={styles.captureRow}><Pressable testID="open-camera" onPress={() => pick(true)} style={({ pressed }) => [styles.capture, { backgroundColor: c.primary, opacity: pressed ? 0.8 : 1 }]}><Feather name="camera" size={20} color={c.primaryForeground} /><Text style={[styles.captureText, { color: c.primaryForeground }]}>{t('Camera', 'الكاميرا')}</Text></Pressable><Pressable testID="open-gallery" onPress={() => pick(false)} style={({ pressed }) => [styles.capture, { backgroundColor: c.secondary, opacity: pressed ? 0.8 : 1 }]}><Feather name="image" size={20} color={c.secondaryForeground} /><Text style={[styles.captureText, { color: c.secondaryForeground }]}>{t('Gallery', 'المعرض')}</Text></Pressable></View>
         <View style={[styles.modelStatus, { backgroundColor: c.soft }]}><View style={[styles.statusDot, { backgroundColor: modelPlugin.state === 'loaded' ? c.success : modelPlugin.state === 'error' ? c.danger : c.warning }]} /><Text style={[styles.modelStatusText, { color: c.secondaryForeground }]}>{modelMessage}</Text></View>
         {busy && <View style={[styles.processing, { backgroundColor: c.soft }]}><ActivityIndicator color={c.primary} /><Text style={[styles.processingText, { color: c.secondaryForeground }]}>{t('Resizing and evaluating 224 × 224 RGB input…', 'جارٍ تحجيم وتحليل مدخل RGB بحجم 224 × 224…')}</Text></View>}
-        {!!error && !busy && <View style={[styles.errorCard, { backgroundColor: `${c.danger}12`, borderColor: c.danger }]}><Feather name="alert-circle" size={18} color={c.danger} /><Text style={[styles.errorText, { color: c.foreground }]}>{error}</Text></View>}
+         {!!error && !busy && <View style={[styles.errorCard, { backgroundColor: `${c.danger}12`, borderColor: c.danger }]}><Feather name="alert-circle" size={18} color={c.danger} /><Text style={[styles.errorText, { color: c.foreground }]}>{error}</Text>{settingsRequired && <Pressable testID="open-settings" onPress={() => Linking.openSettings().catch(() => undefined)} style={[styles.settingsButton, { backgroundColor: c.card, borderColor: c.border }]}><Text style={[styles.settingsButtonText, { color: c.foreground }]}>{t('Open Settings', 'فتح الإعدادات')}</Text></Pressable>}</View>}
         {result && !busy && <View style={[styles.result, { backgroundColor: c.card, borderColor: c.border }]}><View style={styles.resultHead}><View style={{ flex: 1 }}><Text style={[styles.resultEyebrow, { color: c.primary }]}>{t('DIAGNOSIS RESULT', 'نتيجة التشخيص')}</Text><Text style={[styles.resultTitle, { color: c.foreground }]}>{isArabic ? result.disease.ar : result.disease.en}</Text></View><View style={[styles.confidence, { backgroundColor: c.soft }]}><Text style={[styles.confidenceNumber, { color: c.primary }]}>{result.confidence}%</Text><Text style={[styles.confidenceLabel, { color: c.mutedForeground }]}>{t('confidence', 'ثقة')}</Text></View></View><View style={[styles.divider, { backgroundColor: c.border }]} /><View style={styles.rx}><View style={[styles.rxIcon, { backgroundColor: `${c.accent}35` }]}><Feather name="shield" size={17} color={c.accentForeground} /></View><View style={{ flex: 1 }}><Text style={[styles.rxLabel, { color: c.mutedForeground }]}>{t('Recommended treatment', 'العلاج الموصى به')}</Text><Text style={[styles.rxText, { color: c.foreground }]}>{isArabic ? result.disease.treatmentAr : result.disease.treatmentEn}</Text></View></View><View style={[styles.offline, { backgroundColor: c.soft }]}><Feather name="check-circle" size={15} color={c.success} /><Text style={[styles.offlineText, { color: c.secondaryForeground }]}>{t('Predicted from the local model output', 'تم التنبؤ من مخرجات النموذج المحلي')}</Text></View></View>}
       </ScrollView>
     </View>
@@ -172,8 +181,10 @@ const styles = StyleSheet.create({
   modelStatusText: { fontFamily: 'Inter_500Medium', fontSize: 11 },
   processing: { borderRadius: 16, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
   processingText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, flex: 1 },
-  errorCard: { borderRadius: 16, borderWidth: 1, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
+  errorCard: { borderRadius: 16, borderWidth: 1, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' },
   errorText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, lineHeight: 19, flex: 1 },
+  settingsButton: { borderRadius: 10, borderWidth: 1, paddingVertical: 8, paddingHorizontal: 10, marginLeft: 28 },
+  settingsButtonText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
   result: { borderRadius: 22, borderWidth: 1, padding: 18 },
   resultHead: { flexDirection: 'row', alignItems: 'flex-start' },
   resultEyebrow: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.4, marginBottom: 8 },

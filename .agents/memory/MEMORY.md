@@ -1,2 +1,3 @@
 - [Expo theme tokens](expo-theme-tokens.md) — Keep palette typing separate from scheme-independent radius tokens.
 - [Native Expo bridges](expo-platform-bridge.md) — Keep native-only modules behind platform-specific files so Expo web never imports them.
+- [Expo Doctor native modules](expo-doctor-native-modules.md) — Native Nitro modules can need a documented Expo Doctor directory-check exclusion.

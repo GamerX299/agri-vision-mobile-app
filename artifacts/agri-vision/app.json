@@ -29,6 +29,14 @@
       ],
       "expo-font",
       "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow Agri-Vision to use your camera for plant diagnosis.",
+          "photosPermission": "Allow Agri-Vision to access your photos for plant diagnosis.",
+          "microphonePermission": false
+        }
+      ],
       "react-native-fast-tflite"
     ],
     "experiments": {

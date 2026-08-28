@@ -192,7 +192,7 @@ function KsaMap({
         </View>
         <Svg width="100%" height="100%" viewBox="0 0 340 440" style={StyleSheet.absoluteFill}>
           <Path
-            d="M85 61 L145 30 L214 43 L263 85 L286 151 L274 213 L305 266 L278 325 L227 363 L187 411 L141 394 L101 359 L77 314 L48 285 L64 241 L48 193 L60 140 Z"
+            d="M58 51 C72 42 89 37 108 36 C132 36 157 43 184 48 C207 52 225 59 232 72 C239 79 247 90 243 103 C250 113 256 124 251 136 C259 148 263 160 256 172 C267 181 274 193 268 205 C277 217 281 230 272 241 C280 251 281 263 272 273 C278 285 270 297 257 302 C254 314 244 322 231 325 C226 337 214 343 201 342 C190 355 177 365 163 370 C149 366 136 359 123 351 C108 344 99 333 89 326 C79 315 69 305 68 291 C58 282 51 272 56 258 C47 248 43 236 49 224 C41 213 39 201 45 189 C37 178 36 166 42 155 C38 143 39 132 48 121 C44 109 43 98 50 87 C46 77 48 66 58 51 Z"
             fill={`${c.primary}20`}
             stroke={c.primary}
             strokeWidth="2"
@@ -325,7 +325,7 @@ export default function FieldHealth() {
   const openDiagnosis = () => {
     setSelectedFarm(null);
     setMapOpen(false);
-    router.push('/diagnosis');
+    requestAnimationFrame(() => router.navigate('/diagnosis'));
   };
 
   if (mapOpen) {

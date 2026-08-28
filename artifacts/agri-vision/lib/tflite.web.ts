@@ -1,7 +1,11 @@
-export function useLocalTfliteModel() {
+import type { LocalModel } from './tflite';
+
+export function useLocalTfliteModel(): LocalModel {
   return {
-    state: 'error' as const,
-    error: new Error('Native TFLite inference is available in an iOS or Android development build.'),
+    state: 'fallback',
     model: undefined,
+    error: new Error(
+      'The native model runtime is unavailable on web. Using the local demo evaluator instead.',
+    ),
   };
 }

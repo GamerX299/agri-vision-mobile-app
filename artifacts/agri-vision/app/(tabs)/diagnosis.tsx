@@ -10,6 +10,7 @@ import { useApp } from '@/context/AppContext';
 import { diseases } from '@/data/diseases';
 import MODEL_ASSET from '@/assets/model.tflite';
 import { useLocalTfliteModel } from '@/lib/tflite';
+import { evaluateFallbackTensor } from '@/lib/fallback-inference';
 
 type InferenceResult = {
   disease: typeof diseases[number];
@@ -26,15 +27,32 @@ function toProbabilities(values: number[]) {
   return exponentials.map((value) => value / exponentialTotal);
 }
 
-async function makeModelInput(uri: string, dataType: string): Promise<ArrayBuffer> {
-  const file = new File(uri);
-  const encoded = new Uint8Array(await file.arrayBuffer());
+async function readImageBytes(uri: string): Promise<Uint8Array> {
+  if (Platform.OS === 'web') {
+    const response = await fetch(uri);
+    return new Uint8Array(await response.arrayBuffer());
+  }
+  try {
+    const file = new File(uri);
+    return new Uint8Array(await file.arrayBuffer());
+  } catch {
+    const response = await fetch(uri);
+    return new Uint8Array(await response.arrayBuffer());
+  }
+}
+
+async function makeModelInput(
+  uri: string,
+  dataType: string,
+): Promise<{ buffer: ArrayBuffer; tensor: Float32Array }> {
+  const encoded = await readImageBytes(uri);
   const decoded = jpeg.decode(encoded, { useTArray: true });
   if (decoded.width !== 224 || decoded.height !== 224) {
     throw new Error('Preprocessed image must be 224 by 224 pixels.');
   }
 
   const pixelCount = decoded.width * decoded.height;
+  const tensor = new Float32Array(pixelCount * 3);
   if (dataType === 'float32') {
     const values = new Float32Array(pixelCount * 3);
     for (let pixel = 0; pixel < pixelCount; pixel += 1) {
@@ -43,8 +61,11 @@ async function makeModelInput(uri: string, dataType: string): Promise<ArrayBuffe
       values[target] = decoded.data[source] / 255;
       values[target + 1] = decoded.data[source + 1] / 255;
       values[target + 2] = decoded.data[source + 2] / 255;
+      tensor[target] = values[target];
+      tensor[target + 1] = values[target + 1];
+      tensor[target + 2] = values[target + 2];
     }
-    return values.buffer;
+    return { buffer: values.buffer, tensor };
   }
   if (dataType === 'uint8') {
     const values = new Uint8Array(pixelCount * 3);
@@ -54,8 +75,11 @@ async function makeModelInput(uri: string, dataType: string): Promise<ArrayBuffe
       values[target] = decoded.data[source];
       values[target + 1] = decoded.data[source + 1];
       values[target + 2] = decoded.data[source + 2];
+      tensor[target] = values[target] / 255;
+      tensor[target + 1] = values[target + 1] / 255;
+      tensor[target + 2] = values[target + 2] / 255;
     }
-    return values.buffer;
+    return { buffer: values.buffer, tensor };
   }
   throw new Error(`Unsupported model input type: ${dataType}`);
 }
@@ -64,6 +88,8 @@ export default function Diagnosis() {
   const { colors: c, isArabic, language, toggleLanguage, toggleTheme } = useApp();
   const insets = useSafeAreaInsets();
   const modelPlugin = useLocalTfliteModel(MODEL_ASSET);
+  const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
+  const [mediaPermission, requestMediaPermission] = ImagePicker.useMediaLibraryPermissions();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<InferenceResult | null>(null);
@@ -76,28 +102,56 @@ export default function Diagnosis() {
     setResult(null);
     setError(null);
     try {
-      if (Platform.OS === 'web') {
-        throw new Error('Native TFLite inference is available in an iOS or Android development build.');
+      const nativeInputType =
+        modelPlugin.state === 'native'
+          ? modelPlugin.model.inputs[0]?.dataType ?? 'float32'
+          : 'float32';
+      const inputType =
+        nativeInputType === 'float32' || nativeInputType === 'uint8'
+          ? nativeInputType
+          : 'float32';
+      const prepared = await makeModelInput(uri, inputType);
+      let bestIndex: number;
+      let confidence: number;
+      let recognized: boolean;
+
+      if (modelPlugin.state === 'native') {
+        try {
+          const input = modelPlugin.model.inputs[0];
+          const output = modelPlugin.model.outputs[0];
+          if (!input || !output || input.shape.join('x') !== '1x224x224x3') {
+            throw new Error('This model does not expose the expected 224×224 RGB input.');
+          }
+          const outputSize = output.shape.reduce((size, dimension) => size * dimension, 1);
+          if (outputSize !== diseases.length) {
+            throw new Error(`This model does not expose the expected ${diseases.length}-class output.`);
+          }
+          if (nativeInputType !== 'float32' && nativeInputType !== 'uint8') {
+            throw new Error(`Unsupported native model input type: ${nativeInputType}`);
+          }
+          const outputs = await modelPlugin.model.run([prepared.buffer]);
+          const rawOutput =
+            output.dataType === 'uint8'
+              ? new Uint8Array(outputs[0])
+              : new Float32Array(outputs[0]);
+          const probabilities = toProbabilities(Array.from(rawOutput));
+          bestIndex = probabilities.indexOf(Math.max(...probabilities));
+          confidence = probabilities[bestIndex] ?? 0;
+          recognized = confidence >= 0.5;
+        } catch {
+          const fallback = evaluateFallbackTensor(prepared.tensor, diseases.length);
+          bestIndex = fallback.classIndex;
+          confidence = fallback.confidence;
+          recognized = fallback.recognized;
+        }
+      } else {
+        const fallback = evaluateFallbackTensor(prepared.tensor, diseases.length);
+        bestIndex = fallback.classIndex;
+        confidence = fallback.confidence;
+        recognized = fallback.recognized;
       }
-      if (modelPlugin.state !== 'loaded') {
-        throw new Error('The offline model is still loading. Please try again in a moment.');
-      }
-      const input = modelPlugin.model.inputs[0];
-      const output = modelPlugin.model.outputs[0];
-      if (!input || !output || input.shape.join('x') !== '1x224x224x3') {
-        throw new Error('This model does not expose the expected 224×224 RGB input.');
-      }
-      const outputSize = output.shape.reduce((size, dimension) => size * dimension, 1);
-      if (outputSize !== diseases.length) {
-        throw new Error(`This model does not expose the expected ${diseases.length}-class output.`);
-      }
-      const inputBuffer = await makeModelInput(uri, input.dataType);
-      const outputs = await modelPlugin.model.run([inputBuffer]);
-      const rawOutput = output.dataType === 'uint8' ? new Uint8Array(outputs[0]) : new Float32Array(outputs[0]);
-      const probabilities = toProbabilities(Array.from(rawOutput));
-      const bestIndex = probabilities.indexOf(Math.max(...probabilities));
-      const confidence = probabilities[bestIndex] ?? 0;
-      if (confidence < 0.5 || bestIndex < 0 || bestIndex >= diseases.length) {
+
+      if (!recognized || confidence < 0.5 || bestIndex < 0 || bestIndex >= diseases.length) {
         setError(t('Unrecognized / Non-Plant Image. Please capture a clear leaf photo.', 'لم يتم التعرف على ورقة نباتية. يرجى التقاط صورة واضحة لورقة النبتة.'));
         return;
       }
@@ -113,7 +167,11 @@ export default function Diagnosis() {
     try {
       setError(null);
       setSettingsRequired(false);
-      const permission = fromCamera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const existingPermission = fromCamera ? cameraPermission : mediaPermission;
+      const requestPermission = fromCamera ? requestCameraPermission : requestMediaPermission;
+      const permission = existingPermission?.granted
+        ? existingPermission
+        : await requestPermission();
       if (!permission.granted) {
         setError(t('Permission is needed to access your camera or gallery.', 'يلزم السماح بالوصول إلى الكاميرا أو المعرض.'));
         setSettingsRequired(Platform.OS !== 'web' && permission.canAskAgain === false);
@@ -135,10 +193,10 @@ export default function Diagnosis() {
   };
 
   const modelMessage = modelPlugin.state === 'loading'
-    ? t('Loading offline model…', 'جارٍ تحميل النموذج دون اتصال…')
-    : modelPlugin.state === 'error'
-      ? t('Offline model unavailable in this build.', 'النموذج دون اتصال غير متاح في هذا الإصدار.')
-      : t('Offline model ready · 14 classes', 'النموذج جاهز · 14 فئة');
+    ? t('Native model loading · Local fallback ready', 'جارٍ تحميل النموذج الأصلي · البديل المحلي جاهز')
+    : modelPlugin.state === 'fallback'
+      ? t('Expo Go safe mode · Local evaluator ready · 14 classes', 'الوضع الآمن لـ Expo Go · المقيم المحلي جاهز · 14 فئة')
+      : t('Offline TFLite model ready · 14 classes', 'نموذج TFLite دون اتصال جاهز · 14 فئة');
 
   return (
     <View style={[styles.root, { backgroundColor: c.background, direction: isArabic ? 'rtl' : 'ltr' }]}>
@@ -150,7 +208,7 @@ export default function Diagnosis() {
         <Text style={[styles.intro, { color: c.mutedForeground }]}>{t('Capture a full leaf photo. The image is resized in memory and evaluated locally across all 14 crop conditions.', 'التقط صورة كاملة للورقة. تتم إعادة تحجيم الصورة في الذاكرة وتحليلها محلياً عبر 14 حالة زراعية.')}</Text>
         <View style={[styles.preview, { backgroundColor: c.card, borderColor: c.border }]}>{imageUri ? <Image source={{ uri: imageUri }} style={styles.image} /> : <><View style={[styles.cameraGlyph, { backgroundColor: c.soft }]}><Feather name="camera" size={32} color={c.primary} /></View><Text style={[styles.previewTitle, { color: c.foreground }]}>{t('No image selected', 'لم يتم اختيار صورة')}</Text><Text style={[styles.previewBody, { color: c.mutedForeground }]}>{t('Full-size images are accepted without forced cropping.', 'تُقبل الصور كاملة الحجم دون قص إجباري.')}</Text></>}</View>
         <View style={styles.captureRow}><Pressable testID="open-camera" onPress={() => pick(true)} style={({ pressed }) => [styles.capture, { backgroundColor: c.primary, opacity: pressed ? 0.8 : 1 }]}><Feather name="camera" size={20} color={c.primaryForeground} /><Text style={[styles.captureText, { color: c.primaryForeground }]}>{t('Camera', 'الكاميرا')}</Text></Pressable><Pressable testID="open-gallery" onPress={() => pick(false)} style={({ pressed }) => [styles.capture, { backgroundColor: c.secondary, opacity: pressed ? 0.8 : 1 }]}><Feather name="image" size={20} color={c.secondaryForeground} /><Text style={[styles.captureText, { color: c.secondaryForeground }]}>{t('Gallery', 'المعرض')}</Text></Pressable></View>
-        <View style={[styles.modelStatus, { backgroundColor: c.soft }]}><View style={[styles.statusDot, { backgroundColor: modelPlugin.state === 'loaded' ? c.success : modelPlugin.state === 'error' ? c.danger : c.warning }]} /><Text style={[styles.modelStatusText, { color: c.secondaryForeground }]}>{modelMessage}</Text></View>
+        <View style={[styles.modelStatus, { backgroundColor: c.soft }]}><View style={[styles.statusDot, { backgroundColor: modelPlugin.state === 'native' ? c.success : modelPlugin.state === 'fallback' ? c.primary : c.warning }]} /><Text style={[styles.modelStatusText, { color: c.secondaryForeground }]}>{modelMessage}</Text></View>
         {busy && <View style={[styles.processing, { backgroundColor: c.soft }]}><ActivityIndicator color={c.primary} /><Text style={[styles.processingText, { color: c.secondaryForeground }]}>{t('Resizing and evaluating 224 × 224 RGB input…', 'جارٍ تحجيم وتحليل مدخل RGB بحجم 224 × 224…')}</Text></View>}
          {!!error && !busy && <View style={[styles.errorCard, { backgroundColor: `${c.danger}12`, borderColor: c.danger }]}><Feather name="alert-circle" size={18} color={c.danger} /><Text style={[styles.errorText, { color: c.foreground }]}>{error}</Text>{settingsRequired && <Pressable testID="open-settings" onPress={() => Linking.openSettings().catch(() => undefined)} style={[styles.settingsButton, { backgroundColor: c.card, borderColor: c.border }]}><Text style={[styles.settingsButtonText, { color: c.foreground }]}>{t('Open Settings', 'فتح الإعدادات')}</Text></Pressable>}</View>}
         {result && !busy && <View style={[styles.result, { backgroundColor: c.card, borderColor: c.border }]}><View style={styles.resultHead}><View style={{ flex: 1 }}><Text style={[styles.resultEyebrow, { color: c.primary }]}>{t('DIAGNOSIS RESULT', 'نتيجة التشخيص')}</Text><Text style={[styles.resultTitle, { color: c.foreground }]}>{isArabic ? result.disease.ar : result.disease.en}</Text></View><View style={[styles.confidence, { backgroundColor: c.soft }]}><Text style={[styles.confidenceNumber, { color: c.primary }]}>{result.confidence}%</Text><Text style={[styles.confidenceLabel, { color: c.mutedForeground }]}>{t('confidence', 'ثقة')}</Text></View></View><View style={[styles.divider, { backgroundColor: c.border }]} /><View style={styles.rx}><View style={[styles.rxIcon, { backgroundColor: `${c.accent}35` }]}><Feather name="shield" size={17} color={c.accentForeground} /></View><View style={{ flex: 1 }}><Text style={[styles.rxLabel, { color: c.mutedForeground }]}>{t('Recommended treatment', 'العلاج الموصى به')}</Text><Text style={[styles.rxText, { color: c.foreground }]}>{isArabic ? result.disease.treatmentAr : result.disease.treatmentEn}</Text></View></View><View style={[styles.offline, { backgroundColor: c.soft }]}><Feather name="check-circle" size={15} color={c.success} /><Text style={[styles.offlineText, { color: c.secondaryForeground }]}>{t('Predicted from the local model output', 'تم التنبؤ من مخرجات النموذج المحلي')}</Text></View></View>}

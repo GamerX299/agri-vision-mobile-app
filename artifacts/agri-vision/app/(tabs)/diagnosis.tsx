@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { SaveFormat, manipulateAsync } from 'expo-image-manipulator';
-import { File } from 'expo-file-system';
 import * as jpeg from 'jpeg-js';
 import { useApp } from '@/context/AppContext';
 import { diseases } from '@/data/diseases';
@@ -33,7 +32,8 @@ async function readImageBytes(uri: string): Promise<Uint8Array> {
     return new Uint8Array(await response.arrayBuffer());
   }
   try {
-    const file = new File(uri);
+    const { File: ExpoFile } = await import('expo-file-system');
+    const file = new ExpoFile(uri);
     return new Uint8Array(await file.arrayBuffer());
   } catch {
     const response = await fetch(uri);

@@ -322,9 +322,19 @@ export default function FieldHealth() {
   ], [c.accent, c.primary, c.warning, isArabic]);
 
   const openDiagnosis = () => {
-    setSelectedFarm(null);
-    setMapOpen(false);
-    requestAnimationFrame(() => router.navigate('/diagnosis'));
+    try {
+      setSelectedFarm(null);
+      setMapOpen(false);
+      setTimeout(() => {
+        try {
+          router.navigate('/(tabs)/diagnosis');
+        } catch {
+          // The tab may already be transitioning; the native tab state remains safe.
+        }
+      }, 80);
+    } catch {
+      // Closing the sheet is intentionally best-effort and must never crash the app.
+    }
   };
 
   if (mapOpen) {

@@ -1,15 +1,15 @@
 # 🌾 AgriSaudi — ITU AI Readiness Hackathon (Agricultural Track)
 
 **Team Name:** AgriSaudi  
-**Members:** Faiz Alhaj, Sham Kottish, Haneen Essam, Othman Salwai 
+**Members:** Faiz, Sham, Haneen, Othman  
 **Solution:** AgriSaudi  
 
 ---
 
 ## 📌 Submission Links & Deliverables
 
-- 📄 **Knowledge Base Document:** [View AgriSaudi KB (PDF)](./AgriSaudi%20KB.pdf)
-- 🎬 **Demo Video (YouTube):** [Watch Demo Video on YouTube](https://youtu.be/zptnCAw2RB0)
+- 📄 **Knowledge Base Document:** [View AgriSaudi KB (PDF)](https://github.com/GamerX299/agri-vision-mobile-app/blob/main/AgriSaudi%20KB.pdf)
+- 🎬 **Demo Video (YouTube):** [Watch Demo Video on YouTube](https://youtu.be/1t3pe1wp75Y?si=xsy5RzPXQ6gbqzgr)
 - 💻 **Source Code & Repo:** [AgriSaudi GitHub Repository](https://github.com/GamerX299/agri-vision-mobile-app)
 
 ---
